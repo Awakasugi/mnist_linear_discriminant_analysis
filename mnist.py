@@ -2,6 +2,8 @@ from sklearn import datasets, model_selection, svm, metrics
 import numpy as np
 np.random.seed(42)
 
+# test change
+
 def whitening(X_train, X_test, epsilon=1e-5):
     n, p = X_train.shape
     u, v = np.linalg.eig(np.dot(X_train.T, X_train)/n)
