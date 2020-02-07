@@ -2,7 +2,7 @@ from sklearn import datasets, model_selection, svm, metrics
 import numpy as np
 np.random.seed(42)
 
-# test change
+# test change retry
 
 def whitening(X_train, X_test, epsilon=1e-5):
     n, p = X_train.shape
