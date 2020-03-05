@@ -5,15 +5,15 @@ import itertools
 np.random.seed(42)
 
 
-def augument_data(x, data_list):
-    shift_length = range(x)
+def augument_data(len_shift, data_list):
+    shift_length = range(len_shift)
     shift_position = list(itertools.product(shift_length, shift_length))
     return np.array([data[y: y+24, x: x+24] for data in data_list for y, x in shift_position])
 
-def augument_label(x, label):
-    num_repeat = x*x
+def augument_label(len_shift, label):
+    num_repeat = len_shift*len_shift
     return np.repeat(label, num_repeat)
-    
+
 def whitening(X_train, X_test, epsilon = 1e-5):
     mean_x = np.mean(X_train)
     X_train = X_train - mean_x
@@ -22,7 +22,6 @@ def whitening(X_train, X_test, epsilon = 1e-5):
     u, v = np.linalg.eig(np.dot(X_train.T, X_train) / n)
     return(np.dot(X_train, np.dot(v, calculating_diag(u, epsilon))),  (np.dot(np.dot(calculating_diag(u, epsilon), v.T) , X_test.T)).T)
 
-
 def calculating_diag(u, epsilon):
     return np.diag(1 / (np.sqrt(u) + epsilon))
 
@@ -30,9 +29,6 @@ def calculate_log_likelihood_each_class(input_data, inverse_sigma, mu_each_class
     return np.dot(np.dot((input_data.T - mu_each_class.T)/2, inverse_sigma), mu_each_class) + np.log(num_samples_eachclass)
 
 def predict_label(data, inverse_sigma, mu_each_class_list, num_train_sample_per_class, num_class):
-    # predicted_label = np.argmax([calculate_log_likelihood_each_class(data, inverse_sigma, mu_each_class_list[i], 
-    # num_train_sample_per_class[i]) for i in range(num_class)])
-
     return str(np.argmax([calculate_log_likelihood_each_class(data, inverse_sigma, mu_each_class_list[i], 
     num_train_sample_per_class[i]) for i in range(num_class)]))
 
@@ -45,14 +41,17 @@ def main():
     mnist_data = mnist.data / 255
     mnist_label = mnist.target
 
-    mnist_data = mnist_data.reshape(70000, 28, 28)
-    mnist_data = augument_data(5, mnist_data)
-    mnist_label = augument_label(5, mnist_label)
-
-    mnist_data = mnist_data.reshape(1750000, 576)
-
     train_data, test_data, label_train, label_test =\
     model_selection.train_test_split(mnist_data, mnist_label, test_size=0.2, random_state=42)
+
+    train_data = train_data.reshape(56000, 28, 28)
+    train_data = augument_data(5, train_data)
+    label_train = augument_label(5, label_train)
+    train_data = train_data.reshape(1400000, 576)
+
+    test_data = test_data.reshape(14000, 28, 28)
+    test_data = np.array([data[2: 26, 2: 26] for data in test_data])
+    test_data = test_data.reshape(14000, 576)
 
     num_class = np.unique(label_train).size
     print('num_class:', num_class)
@@ -70,7 +69,7 @@ def main():
     print('train_data_eachclass_list.shape:', train_data_eachclass_list.shape)
 
     sum_sigma = 0
-    for sigma, num_samples in zip([np.cov(data_list.T) for data_list in train_data_eachclass_list], num_train_samples_per_class):
+    for sigma, num_samples in zip([np.cov(data_list.T) for data_list in train_data_eachclass_list], num_train_sample_per_class):
         sum_sigma += sigma * num_samples
     print('sum_sigma:', sum_sigma)
 
@@ -78,8 +77,8 @@ def main():
     inverse_sigma = np.linalg.pinv(sigma)
     print('inverse_sigma:', inverse_sigma)
 
-    predicted_label = make_predicted_label_list(test_data, inverse_sigma, np.array([np.mean(trai_n_data[label_train == str(i)], axis = 0) for i in range(num_class)]), 
-    num_train_samples_per_class, num_class)
+    predicted_label = make_predicted_label_list(test_data, inverse_sigma, np.array([np.mean(train_data[label_train == str(i)], axis = 0) for i in range(num_class)]), 
+    num_train_sample_per_class, num_class)
 
     print('accuracuy_score:', accuracy_score(label_test, predicted_label))
     print('precision_score:', precision_score(label_test, predicted_label, average = 'weighted'))
